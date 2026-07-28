@@ -210,8 +210,8 @@
     font-family:'Space Grotesk',sans-serif;
     font-weight:700;
     color:var(--teal);
-    font-size:16px;
-    min-width:64px;
+    font-size:15px;
+    min-width:92px;
     flex-shrink:0;
   }
   .evento .conteudo{min-width:0;}
@@ -220,6 +220,18 @@
     font-size:15.5px;
     color:var(--carvao);
     margin:0 0 2px;
+  }
+  .evento .departamento{
+    display:inline-block;
+    font-size:11.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+    color:var(--laranja-escuro);
+    background:var(--hoje-bg);
+    border-radius:20px;
+    padding:2px 9px;
+    margin:0 0 4px;
   }
   .evento .local{
     font-size:13px;
@@ -238,7 +250,7 @@
   @media (min-width: 1600px){
     .evento .titulo{font-size:19px;}
     .evento .local{font-size:15px;}
-    .evento .horario{font-size:19px;min-width:78px;}
+    .evento .horario{font-size:19px;min-width:112px;}
     .grupo-dia .rotulo-dia .num{font-size:32px;}
   }
 
@@ -290,15 +302,16 @@
 
    2) Cada aba/fonte precisa ter estas colunas, com cabeçalho na primeira
       linha (a ordem das colunas não importa, só o nome):
-        Data | Horario | Titulo | Local
+        Data | Horário Início | Horário Término | Departamento | Evento | Observação
       - Data no formato DD/MM/AAAA (ex: 22/07/2026)
-      - Horario no formato HH:MM (ex: 14:30)
-      - Titulo: nome do evento/compromisso
-      - Local: local ou observação (opcional)
-      Se a aba for gerada por um Google Forms, nomeie as perguntas do
-      formulário exatamente como "Data", "Horario", "Titulo" e "Local" —
-      assim as respostas caem nas colunas certas automaticamente. A coluna
-      extra que o Forms cria ("Carimbo de data/hora") é ignorada.
+      - Horário Início e Horário Término no formato HH:MM (ex: 14:30).
+        Horário Término é opcional.
+      - Departamento: setor/departamento responsável (ex: Patronagem, Dança)
+      - Evento: nome do compromisso/evento
+      - Observação: informação adicional (opcional)
+      Se a aba for gerada por um formulário (ex: formulario.html + Apps
+      Script), nomeie os campos exatamente como acima para que os dados
+      caiam nas colunas certas automaticamente.
 
    3) LOGO_URL: caminho da imagem do logo (ex: "logo.png", hospedado no
       mesmo repositório do GitHub).
@@ -306,7 +319,7 @@
 
   const SHEET_CSV_URLS = [
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vQI8OIvskrOizeTXCxtFECVnzRM356tu9YhhjkJN3igevp8KD5oIXnbT5EoZHxsn71LfgDORhgxL68V/pub?output=csv",
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJ8mHbzLlqAsObU-pC9wY4R_ftp_qdcJHQjWHOICeIihaALNf5BR5g5lWPtuddZr4JyWTmWU5KU0PO/pub?output=csv"
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHljbHuR4jnF3MkrEbrgc9HeH7_fm7TYHAMyEEyZ_AkkSwNFrETsrJMJF3Ea9zhwDgWeTZQt4-mo_i/pub?output=csv"
   ];
   const LOGO_URL = "https://raw.githubusercontent.com/CCN1989/Imagens/refs/heads/main/Logo%20PNG.png";
   const INTERVALO_ATUALIZACAO_MIN = 5;
@@ -431,16 +444,18 @@
       if(!eventosPorMes[mes]) eventosPorMes[mes] = [];
       eventosPorMes[mes].push({
         data: data,
-        horario: (linha['Horario'] || linha['Horário'] || linha['horario'] || linha['Hora'] || linha['hora'] || '').trim(),
-        titulo: (linha['Titulo'] || linha['Título'] || linha['titulo'] || '(sem título)').trim(),
-        local: (linha['Local'] || linha['local'] || '').trim()
+        horaInicio: (linha['Horário Início'] || linha['Horario Inicio'] || linha['Horário Inicio'] || linha['Horario Início'] || '').trim(),
+        horaTermino: (linha['Horário Término'] || linha['Horario Termino'] || linha['Horário Termino'] || linha['Horario Término'] || '').trim(),
+        departamento: (linha['Departamento'] || linha['departamento'] || '').trim(),
+        evento: (linha['Evento'] || linha['evento'] || '(sem título)').trim(),
+        observacao: (linha['Observação'] || linha['Observacao'] || linha['observação'] || linha['observacao'] || '').trim()
       });
     });
-    // ordenar cada mês por data e depois horário
+    // ordenar cada mês por data e depois horário de início
     Object.keys(eventosPorMes).forEach(mes => {
       eventosPorMes[mes].sort((a,b) => {
         if(a.data - b.data !== 0) return a.data - b.data;
-        return (a.horario||'').localeCompare(b.horario||'');
+        return (a.horaInicio||'').localeCompare(b.horaInicio||'');
       });
     });
   }
@@ -490,11 +505,15 @@
           <span class="semana">${DIAS_SEMANA[dataRef.getDay()]}</span>
         </div>`;
       listaDia.forEach(ev => {
+        const faixaHorario = ev.horaInicio
+          ? (ev.horaTermino ? `${ev.horaInicio}–${ev.horaTermino}` : ev.horaInicio)
+          : '—';
         html += `<div class="evento">
-          <div class="horario">${ev.horario || '—'}</div>
+          <div class="horario">${faixaHorario}</div>
           <div class="conteudo">
-            <p class="titulo">${escapeHtml(ev.titulo)}</p>
-            ${ev.local ? `<p class="local">${escapeHtml(ev.local)}</p>` : ''}
+            <p class="titulo">${escapeHtml(ev.evento)}</p>
+            ${ev.departamento ? `<p class="departamento">${escapeHtml(ev.departamento)}</p>` : ''}
+            ${ev.observacao ? `<p class="local">${escapeHtml(ev.observacao)}</p>` : ''}
           </div>
         </div>`;
       });
